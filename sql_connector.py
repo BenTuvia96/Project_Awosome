@@ -1,3 +1,4 @@
+import bcrypt
 import mysql.connector
 from mysql.connector import Error
 
@@ -34,6 +35,15 @@ class SQLConnector:
 
     def insert_user(self, username, password, email, full_name):
         """Insert a new user into the users table."""
+        password = self.hash_password(password)
+
+        # Check if user exists
+        existing_user_id = self.get_user_id_by_username(username)
+        if existing_user_id:
+            print("User already exists. Updating user info.")
+            self.update_user_info(existing_user_id, username, password, email, full_name)
+            return
+
         query = """INSERT INTO users (username, password, email, full_name) 
                    VALUES (%s, %s, %s, %s)"""
         cursor = self.connection.cursor()
@@ -130,7 +140,6 @@ class SQLConnector:
             print(f"User {user_id} updated successfully.")
         except Error as e:
             print(f"Error: {e}")
-
 
     def get_transaction(self, transaction_id):
         """Retrieve the details of a specific transaction."""
@@ -244,6 +253,13 @@ class SQLConnector:
         except Error as e:
             print(f"Error: {e}")
 
+    def get_user_info(self, user_id):
+        """Retrieve a user's information."""
+        query = """SELECT * FROM users WHERE user_id = %s"""
+        cursor = self.connection.cursor()
+        cursor.execute(query, (user_id,))
+        return cursor.fetchone()
+
     def get_user_transactions_in_date_range(self, user_id, start_date, end_date):
         """Retrieve a user's transactions within a specific date range."""
         query = """SELECT * FROM transactions WHERE user_id = %s AND date BETWEEN %s AND %s"""
@@ -271,3 +287,55 @@ class SQLConnector:
             return result[0]
         return None
 
+    def hash_password(self, password: str) -> bytes:
+        """Hash a password for storing."""
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+        return hashed
+
+    def verify_password(self, stored_password: bytes, provided_password: str) -> bool:
+        """Check if a provided password matches the stored hashed version."""
+        try:
+            return bcrypt.checkpw(provided_password.encode('utf-8'), stored_password.encode('utf-8'))
+        except ValueError:
+            return False
+
+    def get_user_stored_password(self, user_id):
+        """Retrieve a user's stored password."""
+        query = """SELECT password FROM users WHERE user_id = %s"""
+        cursor = self.connection.cursor()
+        cursor.execute(query, (user_id,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        return None
+
+    def get_user_id_by_email(self, email):
+        """Retrieve a user's ID by their email."""
+        query = """SELECT user_id FROM users WHERE email = %s"""
+        cursor = self.connection.cursor()
+        cursor.execute(query, (email,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        return None
+
+    def get_user_email_by_id(self, user_id):
+        """Retrieve a user's email by their ID."""
+        query = """SELECT email FROM users WHERE user_id = %s"""
+        cursor = self.connection.cursor()
+        cursor.execute(query, (user_id,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        return None
+
+    def get_user_time_joined(self, user_id):
+        """Retrieve the time a user joined."""
+        query = """SELECT time_joined FROM users WHERE user_id = %s"""
+        cursor = self.connection.cursor()
+        cursor.execute(query, (user_id,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        return None
