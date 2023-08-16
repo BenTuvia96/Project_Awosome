@@ -1,64 +1,51 @@
 import mysql.connector
-from mysql.connector import Error
 
-class DatabaseManager:
-    def __init__(self, host, user, password, database):
-        self.connection = self.connect(host, user, password, database)
+# Database Configuration
+config = {
+    'host': 'localhost',
+    'user': 'root',
+    'password': 'Aa123456',
+    'database': 'trial1'
+}
 
-    def connect(self, host, user, password, database):
-        """Establish connection to the MySQL database."""
-        try:
-            connection = mysql.connector.connect(
-                host=host,
-                user=user,
-                password=password,
-                database=database
-            )
-            if connection.is_connected():
-                print("Successfully connected to the database")
-                return connection
-        except Error as e:
-            print(f"Error while connecting to MySQL: {e}")
-            return None
+# Connect to MySQL database
+connection = mysql.connector.connect(**config)
+cursor = connection.cursor()
 
-    def close(self):
-        """Close the database connection."""
-        if self.connection.is_connected():
-            self.connection.close()
-            print("MySQL connection is closed")
+# SQL Statement to create the table if it doesn't exist
+create_table_sql = """
+CREATE TABLE IF NOT EXISTS transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    date DATE NOT NULL,
+    description VARCHAR(255),
+    category VARCHAR(255),
+    amount DECIMAL(10, 2) NOT NULL,
+    transaction_type ENUM('INCOME', 'EXPENSE') NOT NULL
+)
+"""
 
-    def execute_query(self, query, params=None):
-        """Execute a single query."""
-        cursor = self.connection.cursor()
-        try:
-            cursor.execute(query, params)
-            self.connection.commit()
-        except Error as e:
-            print(f"Error: {e}")
-        finally:
-            cursor.close()
+cursor.execute(create_table_sql)
 
-    def fetch_all(self, query, params=None):
-        """Fetch all results of a query."""
-        cursor = self.connection.cursor()
-        cursor.execute(query, params)
-        records = cursor.fetchall()
-        cursor.close()
-        return records
+# Data to be inserted
+transaction_data = {
+    'date': '2023-08-15',
+    'description': 'Bought Groceries',
+    'category': 'Food',
+    'amount': 50.25,
+    'transaction_type': 'EXPENSE'
+}
 
-# Usage:
-if __name__ == "__main__":
-    # These should ideally come from a config file or environment variables.
-    HOST = 'localhost'
-    USER = 'root'
-    PASSWORD = 'your_password'
-    DATABASE = 'your_database'
+# SQL Insert Statement
+insert_sql = ("INSERT INTO transactions (date, description, category, amount, transaction_type) "
+              "VALUES (%(date)s, %(description)s, %(category)s, %(amount)s, %(transaction_type)s)")
 
-    db_manager = DatabaseManager(HOST, USER, PASSWORD, DATABASE)
+cursor.execute(insert_sql, transaction_data)
 
-    # Test fetching some data
-    records = db_manager.fetch_all("SELECT * FROM some_table")
-    for row in records:
-        print(row)
+# Commit the transaction
+connection.commit()
 
-    db_manager.close()
+# Close the cursor and connection
+cursor.close()
+connection.close()
+
+print("Transaction data inserted successfully!")
