@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Transaction</title>
+</head>
+<body>
+    <h1>Add Transaction</h1>
+    <form action="{{ url_for('add_transaction') }}" method="post">
+        <input type="date" name="date" required>
+        <input type="text" name="description" placeholder="Description" required>
+        <input type="text" name="category" placeholder="Category" required>
+        <input type="number" name="amount" placeholder="Amount" required>
+        <select name="transaction_type">
+            <option value="EXPENSE">Expense</option>
+            <option value="INCOME">Income</option>
+        </select>
+        <button type="submit">Add</button>
+    </form>
+</body>
+</html>

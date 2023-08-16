@@ -88,9 +88,9 @@ class SQLConnector:
 
             # Update the balance based on the transaction type
             if transaction_type == 'EXPENSE':
-                self.update_user_balance(user_id, -amount)
+                self.update_user_balance(user_id, -float(amount))
             elif transaction_type == 'INCOME':
-                self.update_user_balance(user_id, amount)
+                self.update_user_balance(user_id, float(amount))
 
             print("Transaction added successfully.")
         except Error as e:
@@ -206,7 +206,6 @@ class SQLConnector:
         try:
             cursor.execute(query, tuple(values))
             self.connection.commit()
-
             # Adjust balance based on the updated transaction details
             if transaction_type == 'EXPENSE':
                 self.update_user_balance(old_transaction[1], -amount)
@@ -265,6 +264,13 @@ class SQLConnector:
         query = """SELECT * FROM transactions WHERE user_id = %s AND date BETWEEN %s AND %s"""
         cursor = self.connection.cursor()
         cursor.execute(query, (user_id, start_date, end_date))
+        return cursor.fetchall()
+    
+    def get_all_user_transactions(self, user_id):
+        """Retrieve all transactions for a specific user."""
+        query = """SELECT * FROM transactions WHERE user_id = %s"""
+        cursor = self.connection.cursor()
+        cursor.execute(query, (user_id,))
         return cursor.fetchall()
 
     def get_user_id_by_username(self, username):

@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+    <h1>Welcome, {{ session['username'] }}</h1>
+    <p>Your balance: ${{ balance }}</p>
+    <a href="{{ url_for('add_transaction') }}">Add Transaction</a>
+    <a href="{{ url_for('logout') }}">Logout</a>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Update Transaction</title>
+</head>
+<body>
+    <form action="/update_transaction" method="post">
+        <label for="transaction_id">Transaction ID:</label>
+        <input type="number" name="transaction_id" required>
+        <label for="date">Date:</label>
+        <input type="date" name="date">
+        <label for="description">Description:</label>
+        <input type="text" name="description">
+        <label for="category">Category:</label>
+        <input type="text" name="category">
+        <label for="amount">Amount:</label>
+        <input type="number" step="0.01" name="amount">
+        <label for="transaction_type">Transaction Type:</label>
+        <select name="transaction_type">
+            <option value="EXPENSE">Expense</option>
+            <option value="INCOME">Income</option>
+        </select>
+        <button type="submit">Update Transaction</button>
+    </form>
+    <h2>Existing Transactions</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Type</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for transaction in transactions %}
+            <tr>
+                <td>{{ transaction[0] }}</td>  <!-- ID -->
+                <td>{{ transaction[2] }}</td>  <!-- Date -->
+                <td>{{ transaction[3] }}</td>  <!-- Description -->
+                <td>{{ transaction[4] }}</td>  <!-- Category -->
+                <td>{{ transaction[5] }}</td>  <!-- Amount -->
+                <td>{{ transaction[6] }}</td>  <!-- Type -->
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
