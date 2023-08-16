@@ -1,6 +1,7 @@
 import mysql.connector
 from mysql.connector import Error
 
+
 class SQLConnector:
     def __init__(self, host, database, user, password):
         self.host = host
@@ -57,7 +58,7 @@ class SQLConnector:
         """Update the balance for a given user."""
         current_balance = self.get_user_balance(user_id)
         if current_balance is not None:
-            new_balance = current_balance + amount
+            new_balance = float(current_balance) + float(amount)
             query = """UPDATE balances SET current_balance = %s, time_updated = NOW() WHERE user_id = %s"""
             cursor = self.connection.cursor()
             cursor.execute(query, (new_balance, user_id))
@@ -74,7 +75,7 @@ class SQLConnector:
         try:
             cursor.execute(query, (user_id, date, description, category, amount, transaction_type))
             self.connection.commit()
-            
+
             # Update the balance based on the transaction type
             if transaction_type == 'EXPENSE':
                 self.update_user_balance(user_id, -amount)
@@ -101,27 +102,27 @@ class SQLConnector:
         """Update user information."""
         updates = []
         values = []
-        
+
         if username:
             updates.append("username = %s")
             values.append(username)
-        
+
         if password:
             updates.append("password = %s")
             values.append(password)
-        
+
         if email:
             updates.append("email = %s")
             values.append(email)
-        
+
         if full_name:
             updates.append("full_name = %s")
             values.append(full_name)
-        
+
         values.append(user_id)
 
         query = "UPDATE users SET " + ", ".join(updates) + " WHERE user_id = %s"
-        
+
         cursor = self.connection.cursor()
         try:
             cursor.execute(query, tuple(values))
@@ -130,39 +131,79 @@ class SQLConnector:
         except Error as e:
             print(f"Error: {e}")
 
-    def update_transaction(self, transaction_id, date=None, description=None, category=None, amount=None, transaction_type=None):
-        """Update transaction information."""
+
+    def get_transaction(self, transaction_id):
+        """Retrieve the details of a specific transaction."""
+        query = "SELECT * FROM transactions WHERE transaction_id = %s"
+        cursor = self.connection.cursor()
+        cursor.execute(query, (transaction_id,))
+        return cursor.fetchone()
+
+    def update_transaction(self, transaction_id, date=None, description=None, category=None, amount=None,
+                           transaction_type=None):
+        """Update transaction information and adjust the user's balance accordingly."""
+        # Get the old transaction details
+        old_transaction = self.get_transaction(transaction_id)
+
+        if not old_transaction:
+            print(f"Transaction with ID {transaction_id} not found.")
+            return
+
+        old_amount = old_transaction[5]
+        old_type = old_transaction[6]
+
+        # If the transaction type or amount hasn't been provided for update, use the old values
+        if not transaction_type:
+            transaction_type = old_type
+
+        if not amount:
+            amount = old_amount
+
+        # Adjust balance based on old transaction details
+        if old_type == 'EXPENSE':
+            self.update_user_balance(old_transaction[1], old_amount)
+        elif old_type == 'INCOME':
+            self.update_user_balance(old_transaction[1], -old_amount)
+
+        # Update the transaction in the database
         updates = []
         values = []
-        
+
         if date:
             updates.append("date = %s")
             values.append(date)
-        
+
         if description:
             updates.append("description = %s")
             values.append(description)
-        
+
         if category:
             updates.append("category = %s")
             values.append(category)
-        
+
         if amount:
             updates.append("amount = %s")
             values.append(amount)
-        
+
         if transaction_type:
             updates.append("transaction_type = %s")
             values.append(transaction_type)
-        
+
         values.append(transaction_id)
 
         query = "UPDATE transactions SET " + ", ".join(updates) + " WHERE transaction_id = %s"
-        
+
         cursor = self.connection.cursor()
         try:
             cursor.execute(query, tuple(values))
             self.connection.commit()
+
+            # Adjust balance based on the updated transaction details
+            if transaction_type == 'EXPENSE':
+                self.update_user_balance(old_transaction[1], -amount)
+            elif transaction_type == 'INCOME':
+                self.update_user_balance(old_transaction[1], amount)
+
             print(f"Transaction {transaction_id} updated successfully.")
         except Error as e:
             print(f"Error: {e}")
@@ -175,7 +216,25 @@ class SQLConnector:
         return cursor.fetchall()
 
     def delete_transaction(self, transaction_id):
-        """Delete a transaction by its ID."""
+        """Delete a transaction by its ID and adjust the user's balance accordingly."""
+
+        # Get the old transaction details
+        old_transaction = self.get_transaction(transaction_id)
+
+        if not old_transaction:
+            print(f"Transaction with ID {transaction_id} not found.")
+            return
+
+        old_amount = old_transaction[5]
+        old_type = old_transaction[6]
+
+        # Adjust balance based on old transaction details
+        if old_type == 'EXPENSE':
+            self.update_user_balance(old_transaction[1], old_amount)
+        elif old_type == 'INCOME':
+            self.update_user_balance(old_transaction[1], -old_amount)
+
+        # Delete the transaction from the database
         query = "DELETE FROM transactions WHERE transaction_id = %s"
         cursor = self.connection.cursor()
         try:
@@ -192,20 +251,23 @@ class SQLConnector:
         cursor.execute(query, (user_id, start_date, end_date))
         return cursor.fetchall()
 
+    def get_user_id_by_username(self, username):
+        """Retrieve a user's ID by their username."""
+        query = """SELECT user_id FROM users WHERE username = %s"""
+        cursor = self.connection.cursor()
+        cursor.execute(query, (username,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        return None
 
+    def get_last_transaction_id_for_user(self, user_id):
+        """Retrieve the ID of the last transaction for a given user."""
+        query = """SELECT transaction_id FROM transactions WHERE user_id = %s ORDER BY transaction_id DESC LIMIT 1"""
+        cursor = self.connection.cursor()
+        cursor.execute(query, (user_id,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        return None
 
-def main():
-    # Create an instance of the FinanceManager
-    manager = SQLConnector(host="localhost", database="project_awsome", user="root", password="Aa123456")
-
-    # Insert a user
-    # manager.insert_user("JohnDoe", "secure_hashed_password", "john.doe@email.com", "John Doe")
-
-    # Insert a transaction
-    manager.insert_transaction(1, "2023-08-16", "Lunch", "Food", 10.50, "EXPENSE")
-
-    # Close the connection when done
-    manager.close_connection()
-
-if __name__ == "__main__":
-    main()
